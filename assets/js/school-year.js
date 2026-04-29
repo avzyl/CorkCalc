@@ -22,7 +22,7 @@ const codeInput = document.getElementById("subjCode");
 const descInput = document.getElementById("subjDesc");
 const sectionInput = document.getElementById("subjSection");
 const statusInput = document.getElementById("subjStatus");
-const unitsInput = document.getElementById("subjUnits");
+const unitsInput = document.getElementById("subjUnits");          // now a number input
 const prelimInput = document.getElementById("subjPrelim");
 const midtermInput = document.getElementById("subjMidterm");
 const endtermInput = document.getElementById("subjEndterm");
@@ -54,22 +54,21 @@ const noSubjectsMessage = document.getElementById("noSubjectsMessage");
 
 async function loadSubjects() {
     tableBody.innerHTML = "";
-    subjectsLoader.style.display = "block"; // Show loader
-    noSubjectsMessage.style.display = "none"; // Hide no data message
+    subjectsLoader.style.display = "block";
+    noSubjectsMessage.style.display = "none";
 
     const q = await getDocs(collection(db, "users", UID, "schoolYears", syID, "subjects"));
 
-    subjectsLoader.style.display = "none"; // Hide loader after fetching
+    subjectsLoader.style.display = "none";
 
     const subjects = [];
     q.forEach(docSnap => subjects.push({ id: docSnap.id, ...docSnap.data() }));
 
     if (subjects.length === 0) {
-        noSubjectsMessage.style.display = "block"; // Show no data message
+        noSubjectsMessage.style.display = "block";
         return;
     }
 
-    // Sort by createdAt ascending (oldest first)
     subjects.sort((a,b) => a.createdAt?.toDate ? a.createdAt.toDate() - b.createdAt.toDate() : 0);
 
     subjects.forEach(d => {
@@ -90,7 +89,7 @@ async function loadSubjects() {
             descInput.value = d.description;
             sectionInput.value = d.section;
             statusInput.value = d.status || "included";
-            unitsInput.value = d.units || 1;
+            unitsInput.value = d.units || 3;          // [NEW] load custom units
             prelimInput.value = d.prelim || "";
             midtermInput.value = d.midterm || "";
             endtermInput.value = d.endterm || "";
@@ -135,13 +134,13 @@ function roundGrade(grade) {
     return closest.toFixed(2);
 }
 
-// Save Subject
+// Save Subject (supports custom units)
 saveSubject.onclick = async () => {
     const code = codeInput.value;
     const desc = descInput.value;
     const section = sectionInput.value;
     const status = statusInput.value;
-    const units = parseInt(unitsInput.value);
+    const units = parseFloat(unitsInput.value);          // [NEW] parse as float (supports e.g., 10)
     const prelim = prelimInput.value;
     const midterm = midtermInput.value;
     const endterm = endtermInput.value;
@@ -149,6 +148,10 @@ saveSubject.onclick = async () => {
 
     if (!code || !desc || !section) {
         Swal.fire("Missing fields!", "", "warning");
+        return;
+    }
+    if (isNaN(units) || units <= 0) {
+        Swal.fire("Invalid units!", "Units must be a positive number", "warning");
         return;
     }
 
@@ -174,11 +177,52 @@ function clearInputs() {
     descInput.value = "";
     sectionInput.value = "";
     statusInput.value = "included";
-    unitsInput.value = 1;
+    unitsInput.value = 3;
     prelimInput.value = "";
     midtermInput.value = "";
     endtermInput.value = "";
     finalsInput.value = "";
+}
+
+// [NEW] Compute GWA using custom units
+async function computeGWA() {
+    const q = await getDocs(collection(db, "users", UID, "schoolYears", syID, "subjects"));
+    const subjects = [];
+    q.forEach(docSnap => subjects.push({ id: docSnap.id, ...docSnap.data() }));
+
+    const included = subjects.filter(s => s.status === "included" && s.finals && !isNaN(parseFloat(s.finals)));
+
+    if (included.length === 0) {
+        Swal.fire("No subjects", "Add at least one subject with a final grade to compute GWA.", "info");
+        return;
+    }
+
+    let totalWeighted = 0;
+    let totalUnits = 0;
+
+    for (const subj of included) {
+        const grade = parseFloat(subj.finals);
+        const units = parseFloat(subj.units) || 0;
+        if (!isNaN(grade) && units > 0) {
+            totalWeighted += grade * units;
+            totalUnits += units;
+        }
+    }
+
+    if (totalUnits === 0) {
+        Swal.fire("No valid units", "Make sure subjects have units > 0.", "warning");
+        return;
+    }
+
+    const rawGwa = totalWeighted / totalUnits;
+    const roundedGwa = roundGrade(rawGwa);
+
+    Swal.fire({
+        title: "General Weighted Average (GWA)",
+        html: `<strong>${roundedGwa}</strong><br><small>Based on ${included.length} subject(s), ${totalUnits} total unit(s)</small>`,
+        icon: "info",
+        confirmButtonText: "OK"
+    });
 }
 
 // Compute GWA

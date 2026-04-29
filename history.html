@@ -92,11 +92,13 @@
 
                 <div class="input-box">
                     <label>Units</label>
-                    <select id="subjUnits">
+                    <input type="number" id="subjUnits" list="unitsList" step="1" min="0" value="3" />
+                    <datalist id="unitsList">
                         <option value="1">1</option>
                         <option value="2">2</option>
                         <option value="3">3</option>
-                    </select>
+                    </datalist>
+                    <small style="font-size: 0.75rem; color: #666;">You can type any number (e.g., 10)</small>
                 </div>
 
                 <div class="input-box">

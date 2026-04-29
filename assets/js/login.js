@@ -72,6 +72,9 @@ if (googleLoginBtn) {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
 
+            // Safely get displayName from the user object
+            const displayName = user.displayName || "User";
+
             Swal.fire({
                 title: `Hello, ${displayName}!`,
                 icon: 'success',
@@ -87,3 +90,4 @@ if (googleLoginBtn) {
         }
     });
 }
+
