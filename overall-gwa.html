@@ -8,20 +8,7 @@
 
     <!-- fontawesome -->
     <script src="https://kit.fontawesome.com/a60b0a6b5e.js" crossorigin="anonymous"></script>
-
     
-    <!-- Prevetion Script -->
-    <script>
-        const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-
-        if (!currentUser) {
-            // Prevent any content from flashing
-            document.documentElement.style.display = "none";
-
-            // Redirect immediately
-            window.location.href = "/index.html";
-        }
-    </script>
 </head>
 <body>
     <div class="home-container">
